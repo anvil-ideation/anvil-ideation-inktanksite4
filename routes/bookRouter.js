@@ -3,6 +3,7 @@ const Book = require('../models/book');
 
 const bookRouter = express.Router();
 
+/* All books */
 bookRouter.route('/')
 .get((req, res, next) => {
     Book.find()
@@ -16,7 +17,7 @@ bookRouter.route('/')
 .post((req, res, next) => {
     Book.create(req.body)
     .then(book => {
-        console.log('Bampsite Created: ', book);
+        console.log('Book Created: ', book);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.json(book);
@@ -28,15 +29,11 @@ bookRouter.route('/')
     res.end(`PUT operation not supported on /books`);
 })
 .delete((req, res, next) => {
-    Book.deleteMany()
-    .then(response => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        res.json(response);
-    })
-    .catch(err => next(err));
+    res.statusCode = 403;
+    res.end(`DELETE operation not supported on /books`);
 });
 
+/* A specific book */
 bookRouter.route('/:bookId')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
@@ -72,6 +69,7 @@ bookRouter.route('/:bookId')
     .catch(err => next(err))
 });
 
+/* All comments for a specific book */
 bookRouter.route('/:bookId/comments')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
@@ -81,7 +79,7 @@ bookRouter.route('/:bookId/comments')
             res.setHeader('Content-Type', 'application/json');
             res.json(book.comments);
         } else {
-            err = new Error(`book ${req.params.bookId} not found`);
+            err = new Error(`Book ${req.params.bookId} not found`);
             res.statusCode = 404;
             return next(err);
         }
@@ -127,7 +125,7 @@ bookRouter.route('/:bookId/comments')
             })
             .catch(err => next(err));
         } else {
-            err = new Error(`book ${req.params.bookId} not found`);
+            err = new Error(`Book ${req.params.bookId} not found`);
             res.statusCode = 404;
             return next(err);
         }
@@ -135,6 +133,7 @@ bookRouter.route('/:bookId/comments')
     .catch(err => next(err));
 });
 
+/* A specific comment for a specific book */
 bookRouter.route('/:bookId/comments/:commentId')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
@@ -155,7 +154,7 @@ bookRouter.route('/:bookId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post((req, res) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /books/${req.params.bookId}/comments/${req.params.commentId}`);
 })
@@ -163,9 +162,6 @@ bookRouter.route('/:bookId/comments/:commentId')
     Book.findById(req.params.bookId)
     .then(book => {
         if(book && book.comments.id(req.params.commentId)) {
-            if(req.body.rating) {
-                book.comments.id(req.params.commentId).rating = req.body.rating;
-            }
             if(req.body.text) {
                 book.comments.id(req.params.commentId).text = req.body.text;
             }
@@ -177,7 +173,7 @@ bookRouter.route('/:bookId/comments/:commentId')
             })
             .catch(err => next(err));
         } else if (!book) {
-            err = new Error(`book ${req.params.bookId} not found`);
+            err = new Error(`Book ${req.params.bookId} not found`);
             res.statusCode = 404;
             return next(err);
         } else {
@@ -201,11 +197,151 @@ bookRouter.route('/:bookId/comments/:commentId')
             })
             .catch(err => next(err));
         } else if (!book) {
-            err = new Error(`book ${req.params.bookId} not found`);
+            err = new Error(`Book ${req.params.bookId} not found`);
             res.statusCode = 404;
             return next(err);
         } else {
             err = new Error(`Comment ${req.params.commentId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* All ratings for a specific book */
+bookRouter.route('/:bookId/ratings')
+.get((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(book.ratings);
+        } else {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book) {
+            book.ratings.push(req.body);
+            book.save()
+            .then(book => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(book);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.put((req, res) => {
+    res.statusCode = 403;
+    res.end(`PUT operation not supported on /books/${req.params.bookId}/ratings`);
+})
+.delete((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book) {
+            for (let i = (book.ratings.length-1); i >=0; i--) {
+                book.ratings.id(book.ratings[i]._id).remove();
+            }
+            book.save()
+            .then(book => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(book);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* A specific rating for a specific book */
+bookRouter.route('/:bookId/ratings/:ratingId')
+.get((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book && book.ratings.id(req.params.ratingId)) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(book.ratings.id(req.params.ratingId));
+        } else if (!book) {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /books/${req.params.bookId}/ratings/${req.params.ratingId}`);
+})
+.put((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book && book.ratings.id(req.params.ratingId)) {
+            if(req.body.rating) {
+                book.ratings.id(req.params.ratingId).rating = req.body.rating;
+            }
+            book.save()
+            .then(book => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(book);
+            })
+            .catch(err => next(err));
+        } else if (!book) {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete((req, res, next) => {
+    Book.findById(req.params.bookId)
+    .then(book => {
+        if(book && book.ratings.id(req.params.ratingId)) {
+            book.ratings.id(req.params.ratingId).remove();
+            book.save()
+            .then(book => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(book);
+            })
+            .catch(err => next(err));
+        } else if (!book) {
+            err = new Error(`Book ${req.params.bookId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
             res.statusCode = 404;
             return next(err);
         }

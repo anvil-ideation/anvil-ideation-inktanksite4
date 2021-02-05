@@ -1,17 +1,28 @@
 const express = require('express');
+const Author = require('../models/author');
+
 const authorRouter = express.Router();
 
+/* All authors */
 authorRouter.route('/')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('ContentType', 'text/plain');
-    next();
+.get((req, res, next) => {
+    Author.find()
+    .then(authors => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(authors);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end(`Will send all the authors to you`);
-})
-.post((req, res) => {
-    res.end(`Will add the author: ${req.body.name} with description: ${req.body.description}`);
+.post((req, res, next) => {
+    Author.create(req.body)
+    .then(author => {
+        console.log('Author Created: ', author);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(author);
+    })
+    .catch(err => next(err));
 })
 .put((req, res) => {
     res.statusCode = 403;
@@ -22,26 +33,461 @@ authorRouter.route('/')
     res.end(`DELETE operation not supported on /authors`);
 });
 
+/* A specific author */
 authorRouter.route('/:authorId')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('ContentType', 'text/plain');
-    next();
-})
-.get((req, res) => {
-    res.end(`Will send details of the author: ${req.params.authorId} to you`);
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(author);
+    })
+    .catch(err => next(err))
 })
 .post((req, res) => {
-    res.write(`Adding comment or rating regardingthe author: ${req.params.authorId}\n`);
-    res.end(`Will add comment or rating regarding the author: ${req.body.name}
-        with description: ${req.body.description}`);
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /authors/${req.params.authorId}`);
+})
+.put((req, res, next) => {
+    Author.findByIdAndUpdate(req.params.authorId, {
+        $set: req.body,
+    }, { new: true })
+    .then(author => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(author);
+    })
+    .catch(err => next(err))
+})
+.delete((req, res, next) => {
+    Author.findByIdAndDelete(req.params.authorId)
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err))
+});
+
+/* All comments for a specific author */
+authorRouter.route('/:authorId/comments')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.comments);
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            author.comments.push(req.body);
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
 })
 .put((req, res) => {
     res.statusCode = 403;
-    res.end(`DELETE operation not supported on /authors`);
+    res.end(`PUT operation not supported on /authors/${req.params.authorId}/comments`);
 })
-.delete((req, res) => {
-    res.end(`Deleting comment or rating regarding the author: ${req.params.authorId}`);
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            for (let i = (author.comments.length-1); i >=0; i--) {
+                author.comments.id(author.comments[i]._id).remove();
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* A specific comment for a specific author */
+authorRouter.route('/:authorId/comments/:commentId')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.comments.id(req.params.commentId)) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.comments.id(req.params.commentId));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /authors/${req.params.authorId}/comments/${req.params.commentId}`);
+})
+.put((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.comments.id(req.params.commentId)) {
+            if(req.body.text) {
+                author.comments.id(req.params.commentId).text = req.body.text;
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.comments.id(req.params.commentId)) {
+            author.comments.id(req.params.commentId).remove();
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* All ratings for a specific author */
+authorRouter.route('/:authorId/ratings')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.ratings);
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            author.ratings.push(req.body);
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.put((req, res) => {
+    res.statusCode = 403;
+    res.end(`PUT operation not supported on /authors/${req.params.authorId}/ratings`);
+})
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            for (let i = (author.ratings.length-1); i >=0; i--) {
+                author.ratings.id(author.ratings[i]._id).remove();
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/*  A specific rating for a specific author
+    Should only ever be one bio at index 0  */
+authorRouter.route('/:authorId/ratings/:ratingId')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.ratings.id(req.params.ratingId)) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.ratings.id(req.params.ratingId));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /authors/${req.params.authorId}/ratings/${req.params.ratingId}`);
+})
+.put((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.ratings.id(req.params.ratingId)) {
+            if(req.body.rating) {
+                author.ratings.id(req.params.ratingId).rating = req.body.rating;
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.ratings.id(req.params.ratingId)) {
+            author.ratings.id(req.params.ratingId).remove();
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Rating ${req.params.ratingId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* All bios for a specific author */
+authorRouter.route('/:authorId/bio')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.bio[0]);
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            author.bio.splice(0,1,req.body);
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.put((req, res) => {
+    res.statusCode = 403;
+    res.end(`PUT operation not supported on /authors/${req.params.authorId}/bio`);
+})
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author) {
+            for (let i = (author.bio.length-1); i >=0; i--) {
+                author.bio.id(author.ratings[i]._id).remove();
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);   
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+/* A specific bio for a specific author */
+authorRouter.route('/:authorId/bio/:bioId')
+.get((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.bio.id(req.params.bioId)) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(author.bio.id(req.params.bioId));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Bio ${req.params.bioId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /authors/${req.params.authorId}/bio/${req.params.bioId}`);
+})
+.put((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.bio.id(req.params.bioId)) {
+            if(req.body.bio) {
+                author.bio.id(req.params.bioId).bio = req.body.bio;
+            }
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Bio ${req.params.bioId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete((req, res, next) => {
+    Author.findById(req.params.authorId)
+    .then(author => {
+        if(author && author.bio.id(req.params.bioId)) {
+            author.ratings.id(req.params.ratingId).remove();
+            author.save()
+            .then(author => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(author);
+            })
+            .catch(err => next(err));
+        } else if (!author) {
+            err = new Error(`Author ${req.params.authorId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        } else {
+            err = new Error(`Bio ${req.params.bioId} not found`);
+            res.statusCode = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
 });
 
 module.exports = authorRouter;
