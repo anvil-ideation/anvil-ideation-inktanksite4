@@ -21,11 +21,9 @@ const bioSchema = new Schema({
     },
     review: {
         type: String,
-        required: true,
     },
     reviewAuthor: {
         type: String,
-        required: true,
     },
     description: {
         type: String,
