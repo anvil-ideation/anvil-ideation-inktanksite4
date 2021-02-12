@@ -9,9 +9,8 @@ const ratingSchema = new Schema({
         required: true,
     },
     author: {
-        type: String,
-        required: true,
-        unique: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     },
 }, {
     timestamps: true,
@@ -23,9 +22,8 @@ const commentSchema = new Schema({
         required: true,
     },
     author: {
-        type: String,
-        required: true,
-        unique: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     },
 }, {
     timestamps: true,

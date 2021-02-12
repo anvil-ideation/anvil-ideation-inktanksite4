@@ -1,8 +1,9 @@
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
-const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const passport = require('passport');
+const config = require('./config');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -11,16 +12,16 @@ const authorRouter = require('./routes/authorRouter');
 
 const mongoose = require('mongoose');
 
-const url = 'mongodb://localhost:27017/inktank';
+const url = config.mongoUrl;
 const connect = mongoose.connect(url, {
-    useCreateIndex: true,
-    useFindAndModify: false,
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 });
 
 connect.then(() => console.log('Connected correctly to server'),
-    err => console.log(err)
+  err => console.log(err)
 );
 
 const app = express();
@@ -32,11 +33,15 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(cookieParser('12345-67890-09876-54321'));
+
+app.use(passport.initialize());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/books', bookRouter);
 app.use('/authors', authorRouter);
 

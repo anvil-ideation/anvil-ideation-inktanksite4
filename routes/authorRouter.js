@@ -1,5 +1,6 @@
 const express = require('express');
 const Author = require('../models/author');
+const authenticate = require('../authenticate');
 
 const authorRouter = express.Router();
 
@@ -7,6 +8,7 @@ const authorRouter = express.Router();
 authorRouter.route('/')
 .get((req, res, next) => {
     Author.find()
+    .populate('comments.author')
     .then(authors => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -14,7 +16,7 @@ authorRouter.route('/')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Author.create(req.body)
     .then(author => {
         console.log('Author Created: ', author);
@@ -24,11 +26,11 @@ authorRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors`);
 })
-.delete((req, res) => {
+.delete(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`DELETE operation not supported on /authors`);
 });
@@ -37,6 +39,7 @@ authorRouter.route('/')
 authorRouter.route('/:authorId')
 .get((req, res, next) => {
     Author.findById(req.params.authorId)
+    .populate('comments.author')
     .then(author => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -44,11 +47,11 @@ authorRouter.route('/:authorId')
     })
     .catch(err => next(err))
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Author.findByIdAndUpdate(req.params.authorId, {
         $set: req.body,
     }, { new: true })
@@ -59,7 +62,7 @@ authorRouter.route('/:authorId')
     })
     .catch(err => next(err))
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findByIdAndDelete(req.params.authorId)
     .then(response => {
         res.statusCode = 200;
@@ -73,6 +76,7 @@ authorRouter.route('/:authorId')
 authorRouter.route('/:authorId/comments')
 .get((req, res, next) => {
     Author.findById(req.params.authorId)
+    .populate('comments.author')
     .then(author => {
         if(author) {
             res.statusCode = 200;
@@ -86,10 +90,11 @@ authorRouter.route('/:authorId/comments')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
+            req.body.author = req.user._id;
             author.comments.push(req.body);
             author.save()
             .then(author => {
@@ -106,11 +111,11 @@ authorRouter.route('/:authorId/comments')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/comments`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -137,6 +142,7 @@ authorRouter.route('/:authorId/comments')
 authorRouter.route('/:authorId/comments/:commentId')
 .get((req, res, next) => {
     Author.findById(req.params.authorId)
+    .populate('comments.author')
     .then(author => {
         if(author && author.comments.id(req.params.commentId)) {
             res.statusCode = 200;
@@ -154,11 +160,11 @@ authorRouter.route('/:authorId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/comments/${req.params.commentId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.comments.id(req.params.commentId)) {
@@ -184,7 +190,7 @@ authorRouter.route('/:authorId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.comments.id(req.params.commentId)) {
@@ -213,6 +219,7 @@ authorRouter.route('/:authorId/comments/:commentId')
 authorRouter.route('/:authorId/ratings')
 .get((req, res, next) => {
     Author.findById(req.params.authorId)
+    .populate('ratings.author')
     .then(author => {
         if(author) {
             res.statusCode = 200;
@@ -226,10 +233,11 @@ authorRouter.route('/:authorId/ratings')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
+            req.body.author = req.user._id;
             author.ratings.push(req.body);
             author.save()
             .then(author => {
@@ -246,11 +254,11 @@ authorRouter.route('/:authorId/ratings')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/ratings`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -278,6 +286,7 @@ authorRouter.route('/:authorId/ratings')
 authorRouter.route('/:authorId/ratings/:ratingId')
 .get((req, res, next) => {
     Author.findById(req.params.authorId)
+    .populate('ratings.author')
     .then(author => {
         if(author && author.ratings.id(req.params.ratingId)) {
             res.statusCode = 200;
@@ -295,11 +304,11 @@ authorRouter.route('/:authorId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/ratings/${req.params.ratingId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.ratings.id(req.params.ratingId)) {
@@ -325,7 +334,7 @@ authorRouter.route('/:authorId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.ratings.id(req.params.ratingId)) {
@@ -367,7 +376,7 @@ authorRouter.route('/:authorId/bio')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -387,11 +396,11 @@ authorRouter.route('/:authorId/bio')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/bio`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -435,11 +444,11 @@ authorRouter.route('/:authorId/bio/:bioId')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/bio/${req.params.bioId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.bio.id(req.params.bioId)) {
@@ -465,7 +474,7 @@ authorRouter.route('/:authorId/bio/:bioId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.bio.id(req.params.bioId)) {

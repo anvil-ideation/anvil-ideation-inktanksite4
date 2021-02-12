@@ -1,5 +1,6 @@
 const express = require('express');
 const Book = require('../models/book');
+const authenticate = require('../authenticate');
 
 const bookRouter = express.Router();
 
@@ -7,6 +8,7 @@ const bookRouter = express.Router();
 bookRouter.route('/')
 .get((req, res, next) => {
     Book.find()
+    .populate('comments.author')
     .then(books => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -14,7 +16,7 @@ bookRouter.route('/')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Book.create(req.body)
     .then(book => {
         console.log('Book Created: ', book);
@@ -24,11 +26,11 @@ bookRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /books`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(`DELETE operation not supported on /books`);
 });
@@ -37,6 +39,7 @@ bookRouter.route('/')
 bookRouter.route('/:bookId')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
+    .populate('comments.author')
     .then(book => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -44,11 +47,11 @@ bookRouter.route('/:bookId')
     })
     .catch(err => next(err))
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /books/${req.params.bookId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Book.findByIdAndUpdate(req.params.bookId, {
         $set: req.body,
     }, { new: true })
@@ -59,7 +62,7 @@ bookRouter.route('/:bookId')
     })
     .catch(err => next(err))
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Book.findByIdAndDelete(req.params.bookId)
     .then(response => {
         res.statusCode = 200;
@@ -73,6 +76,7 @@ bookRouter.route('/:bookId')
 bookRouter.route('/:bookId/comments')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
+    .populate('comments.author')
     .then(book => {
         if(book) {
             res.statusCode = 200;
@@ -86,10 +90,11 @@ bookRouter.route('/:bookId/comments')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book) {
+            req.body.author = req.user._id;
             book.comments.push(req.body);
             book.save()
             .then(book => {
@@ -106,11 +111,11 @@ bookRouter.route('/:bookId/comments')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /books/${req.params.bookId}/comments`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book) {
@@ -137,6 +142,7 @@ bookRouter.route('/:bookId/comments')
 bookRouter.route('/:bookId/comments/:commentId')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
+    .populate('comments.author')
     .then(book => {
         if(book && book.comments.id(req.params.commentId)) {
             res.statusCode = 200;
@@ -154,11 +160,11 @@ bookRouter.route('/:bookId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /books/${req.params.bookId}/comments/${req.params.commentId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book && book.comments.id(req.params.commentId)) {
@@ -184,7 +190,7 @@ bookRouter.route('/:bookId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book && book.comments.id(req.params.commentId)) {
@@ -213,6 +219,7 @@ bookRouter.route('/:bookId/comments/:commentId')
 bookRouter.route('/:bookId/ratings')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
+    .populate('ratings.author')
     .then(book => {
         if(book) {
             res.statusCode = 200;
@@ -226,10 +233,11 @@ bookRouter.route('/:bookId/ratings')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book) {
+            req.body.author = req.user._id;
             book.ratings.push(req.body);
             book.save()
             .then(book => {
@@ -246,11 +254,11 @@ bookRouter.route('/:bookId/ratings')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /books/${req.params.bookId}/ratings`);
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book) {
@@ -277,6 +285,7 @@ bookRouter.route('/:bookId/ratings')
 bookRouter.route('/:bookId/ratings/:ratingId')
 .get((req, res, next) => {
     Book.findById(req.params.bookId)
+    .populate('ratings.author')
     .then(book => {
         if(book && book.ratings.id(req.params.ratingId)) {
             res.statusCode = 200;
@@ -294,11 +303,11 @@ bookRouter.route('/:bookId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /books/${req.params.bookId}/ratings/${req.params.ratingId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book && book.ratings.id(req.params.ratingId)) {
@@ -324,7 +333,7 @@ bookRouter.route('/:bookId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Book.findById(req.params.bookId)
     .then(book => {
         if(book && book.ratings.id(req.params.ratingId)) {
