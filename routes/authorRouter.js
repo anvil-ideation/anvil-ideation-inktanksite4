@@ -1,12 +1,14 @@
 const express = require('express');
 const Author = require('../models/author');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const authorRouter = express.Router();
 
 /* All authors */
 authorRouter.route('/')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.find()
     .populate('comments.author')
     .then(authors => {
@@ -16,7 +18,7 @@ authorRouter.route('/')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Author.create(req.body)
     .then(author => {
         console.log('Author Created: ', author);
@@ -26,18 +28,19 @@ authorRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put(authenticate.verifyUser, (req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors`);
 })
-.delete(authenticate.verifyUser, (req, res) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`DELETE operation not supported on /authors`);
 });
 
 /* A specific author */
 authorRouter.route('/:authorId')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .populate('comments.author')
     .then(author => {
@@ -47,11 +50,11 @@ authorRouter.route('/:authorId')
     })
     .catch(err => next(err))
 })
-.post(authenticate.verifyUser, (req, res) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}`);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Author.findByIdAndUpdate(req.params.authorId, {
         $set: req.body,
     }, { new: true })
@@ -62,7 +65,7 @@ authorRouter.route('/:authorId')
     })
     .catch(err => next(err))
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Author.findByIdAndDelete(req.params.authorId)
     .then(response => {
         res.statusCode = 200;
@@ -74,7 +77,8 @@ authorRouter.route('/:authorId')
 
 /* All comments for a specific author */
 authorRouter.route('/:authorId/comments')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .populate('comments.author')
     .then(author => {
@@ -90,7 +94,7 @@ authorRouter.route('/:authorId/comments')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -111,11 +115,11 @@ authorRouter.route('/:authorId/comments')
     })
     .catch(err => next(err));
 })
-.put(authenticate.verifyUser, (req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/comments`);
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -140,7 +144,8 @@ authorRouter.route('/:authorId/comments')
 
 /* A specific comment for a specific author */
 authorRouter.route('/:authorId/comments/:commentId')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .populate('comments.author')
     .then(author => {
@@ -160,11 +165,11 @@ authorRouter.route('/:authorId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/comments/${req.params.commentId}`);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.comments.id(req.params.commentId)) {
@@ -190,7 +195,7 @@ authorRouter.route('/:authorId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.comments.id(req.params.commentId)) {
@@ -217,7 +222,8 @@ authorRouter.route('/:authorId/comments/:commentId')
 
 /* All ratings for a specific author */
 authorRouter.route('/:authorId/ratings')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .populate('ratings.author')
     .then(author => {
@@ -233,7 +239,7 @@ authorRouter.route('/:authorId/ratings')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -254,11 +260,11 @@ authorRouter.route('/:authorId/ratings')
     })
     .catch(err => next(err));
 })
-.put(authenticate.verifyUser, (req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/ratings`);
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -284,7 +290,8 @@ authorRouter.route('/:authorId/ratings')
 /*  A specific rating for a specific author
     Should only ever be one bio at index 0  */
 authorRouter.route('/:authorId/ratings/:ratingId')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .populate('ratings.author')
     .then(author => {
@@ -304,11 +311,11 @@ authorRouter.route('/:authorId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/ratings/${req.params.ratingId}`);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.ratings.id(req.params.ratingId)) {
@@ -334,7 +341,7 @@ authorRouter.route('/:authorId/ratings/:ratingId')
     })
     .catch(err => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.ratings.id(req.params.ratingId)) {
@@ -361,7 +368,8 @@ authorRouter.route('/:authorId/ratings/:ratingId')
 
 /* All bios for a specific author */
 authorRouter.route('/:authorId/bio')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -376,7 +384,7 @@ authorRouter.route('/:authorId/bio')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -396,11 +404,11 @@ authorRouter.route('/:authorId/bio')
     })
     .catch(err => next(err));
 })
-.put(authenticate.verifyUser, (req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end(`PUT operation not supported on /authors/${req.params.authorId}/bio`);
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author) {
@@ -425,7 +433,8 @@ authorRouter.route('/:authorId/bio')
 
 /* A specific bio for a specific author */
 authorRouter.route('/:authorId/bio/:bioId')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.bio.id(req.params.bioId)) {
@@ -444,11 +453,11 @@ authorRouter.route('/:authorId/bio/:bioId')
     })
     .catch(err => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end(`POST operation not supported on /authors/${req.params.authorId}/bio/${req.params.bioId}`);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.bio.id(req.params.bioId)) {
@@ -474,7 +483,7 @@ authorRouter.route('/:authorId/bio/:bioId')
     })
     .catch(err => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Author.findById(req.params.authorId)
     .then(author => {
         if(author && author.bio.id(req.params.bioId)) {

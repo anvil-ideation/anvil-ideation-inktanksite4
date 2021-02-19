@@ -38,3 +38,13 @@ exports.jwtPassport = passport.use(
 );
 
 exports.verifyUser = passport.authenticate('jwt', {session: false});
+
+exports.verifyAdmin = (req, res, next) => {
+    if (req.user.admin) {
+        next();
+    } else {
+        err = new Error(`User ${req.user.username} does not have permission to do this.`);
+        res.statusCode = 403;
+        return next(err);
+    }
+};
