@@ -5,7 +5,7 @@ const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt  = require('passport-jwt').ExtractJwt;
 const jwt = require('jsonwebtoken');
 const FacebookTokenStrategy = require('passport-facebook-token');
-const GoogleTokenStrategy = require('passport-google-oauth20').Strategy;
+const GoogleTokenStrategy = require('passport-google-oauth2').Strategy;
 
 const config = require('./config');
 
@@ -87,10 +87,15 @@ exports.googlePassport = passport.use(
         {
             clientID: config.google.clientId,
             clientSecret: config.google.clientSecret,
-            callbackURL: `https://localhost:3443/users/auth/google/callback`
+            callbackURL: `https://mydomain.com:3443/users/auth/google/callback`,
+            passReqToCallback: true
         }, 
-        (accessToken, refreshToken, profile, cb) => {
+        (req, accessToken, refreshToken, profile, cb) => {
             User.findOne({ googleId: profile.id }, (err, user) => {
+                User.findOrCreate({ googleId: profile.id }, function (err, user) {
+                    return done(err, user);
+                });
+                /*
                 console.log(accessToken);
                 if (err) {
                     return createImageBitmap(err, false);
@@ -109,7 +114,7 @@ exports.googlePassport = passport.use(
                             return cb(null, user);
                         }
                     });
-                }
+                }*/
             });
         }
     )

@@ -84,7 +84,7 @@ router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res
     }
 });
 
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile'] 
+router.get('/auth/google', passport.authenticate('google', { scope: [ 'email', 'profile'] 
 }));
 
 router.get('/auth/google/callback', 
